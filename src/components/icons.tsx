@@ -1,6 +1,6 @@
 import type { Especie } from "@/lib/store";
 
-type Props = { className?: string };
+type Props = { className?: string | undefined };
 
 export function IconAgenda({ className = "h-5 w-5" }: Props) {
   return (
@@ -69,6 +69,12 @@ function IconGato({ className = "h-5 w-5" }: Props) {
   );
 }
 
-export function IconEspecie({ especie, className }: { especie: Especie; className?: string }) {
+export function IconEspecie({
+  especie,
+  className,
+}: {
+  especie: Especie;
+  className?: string | undefined;
+}) {
   return especie === "Gato" ? <IconGato className={className} /> : <IconPerro className={className} />;
 }
