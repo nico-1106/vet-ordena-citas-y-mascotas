@@ -13,7 +13,7 @@ import {
   type Especie,
 } from "@/lib/store";
 
-type Busqueda = { mascota?: string };
+type Busqueda = { mascota: string | undefined };
 
 export const Route = createFileRoute("/nueva-cita")({
   validateSearch: (search: Record<string, unknown>): Busqueda => ({
