@@ -77,12 +77,12 @@ function Mascotas() {
                   >
                     {pv.estado === "vencida"
                       ? `⚠️ Vacuna ${pv.nombre} vencida hace ${Math.abs(pv.dias)} días`
-                      : `⏳ Vacuna ${pv.nombre} vence el ${formatoFecha(pv.proxima)} (en ${pv.dias} días)`}
+                      : `• Vacuna ${pv.nombre} vence el ${formatoFecha(pv.proxima)} (en ${pv.dias} días)`}
                   </p>
                 )}
                 {pv && pv.estado === "al-dia" && (
                   <p className="mt-3 rounded-lg bg-success-soft px-3 py-2 text-sm font-semibold text-success">
-                    ✅ Vacunas al día · próxima {formatoFecha(pv.proxima)}
+                    • Vacunas al día · próxima {formatoFecha(pv.proxima)}
                   </p>
                 )}
                 {!pv && (

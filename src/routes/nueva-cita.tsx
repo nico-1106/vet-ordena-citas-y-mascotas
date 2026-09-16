@@ -271,7 +271,7 @@ function NuevaCita() {
 
         {ok && (
           <p className="rounded-xl bg-success-soft px-4 py-3 text-sm font-semibold text-success">
-            ✅ ¡Cita agendada! Te llevamos a la agenda…
+            • ¡Cita agendada! Te llevamos a la agenda…
           </p>
         )}
 
