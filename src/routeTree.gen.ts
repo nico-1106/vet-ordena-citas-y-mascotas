@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as NuevaCitaRouteImport } from './routes/nueva-cita'
 import { Route as MascotasIndexRouteImport } from './routes/mascotas.index'
+import { Route as MascotasIdRouteImport } from './routes/mascotas.$id'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -28,34 +29,43 @@ const MascotasIndexRoute = MascotasIndexRouteImport.update({
   path: '/mascotas/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const MascotasIdRoute = MascotasIdRouteImport.update({
+  id: '/mascotas/$id',
+  path: '/mascotas/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/nueva-cita': typeof NuevaCitaRoute
+  '/mascotas/$id': typeof MascotasIdRoute
   '/mascotas/': typeof MascotasIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/nueva-cita': typeof NuevaCitaRoute
+  '/mascotas/$id': typeof MascotasIdRoute
   '/mascotas': typeof MascotasIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/nueva-cita': typeof NuevaCitaRoute
+  '/mascotas/$id': typeof MascotasIdRoute
   '/mascotas/': typeof MascotasIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/nueva-cita' | '/mascotas/'
+  fullPaths: '/' | '/nueva-cita' | '/mascotas/$id' | '/mascotas/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/nueva-cita' | '/mascotas'
-  id: '__root__' | '/' | '/nueva-cita' | '/mascotas/'
+  to: '/' | '/nueva-cita' | '/mascotas/$id' | '/mascotas'
+  id: '__root__' | '/' | '/nueva-cita' | '/mascotas/$id' | '/mascotas/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   NuevaCitaRoute: typeof NuevaCitaRoute
+  MascotasIdRoute: typeof MascotasIdRoute
   MascotasIndexRoute: typeof MascotasIndexRoute
 }
 
@@ -82,12 +92,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MascotasIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/mascotas/$id': {
+      id: '/mascotas/$id'
+      path: '/mascotas/$id'
+      fullPath: '/mascotas/$id'
+      preLoaderRoute: typeof MascotasIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   NuevaCitaRoute: NuevaCitaRoute,
+  MascotasIdRoute: MascotasIdRoute,
   MascotasIndexRoute: MascotasIndexRoute,
 }
 export const routeTree = rootRouteImport
