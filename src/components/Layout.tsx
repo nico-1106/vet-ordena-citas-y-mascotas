@@ -15,7 +15,7 @@ function Marca({ compacta = false }: { compacta?: boolean }) {
         <IconHuella className="h-4.5 w-4.5" />
       </span>
       <span className="leading-tight">
-        <span className="block text-[15px] font-bold tracking-tight text-foreground">VetOrdena</span>
+        <span className="block text-[15px] font-bold tracking-tight text-foreground">Animals</span>
         {!compacta && (
           <span className="block text-[11px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
             Gestión clínica
