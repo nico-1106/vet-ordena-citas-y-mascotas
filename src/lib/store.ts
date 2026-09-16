@@ -51,10 +51,24 @@ export const HORAS = [
   "15:00", "15:30", "16:00", "16:30", "17:00", "17:30",
 ];
 
+// Fechas ancladas a la hora de Colombia para que el servidor y el
+// navegador calculen siempre el mismo día (evita fallos de hidratación).
+const TZ = "America/Bogota";
+
+function partesDia(d = new Date()) {
+  const f = new Intl.DateTimeFormat("en-CA", {
+    timeZone: TZ,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(d);
+  const get = (t: string) => Number(f.find((p) => p.type === t)!.value);
+  return { anio: get("year"), mes: get("month"), dia: get("day") };
+}
+
 export function hoyISO(d = new Date()) {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
-    d.getDate(),
-  ).padStart(2, "0")}`;
+  const { anio, mes, dia } = partesDia(d);
+  return `${anio}-${String(mes).padStart(2, "0")}-${String(dia).padStart(2, "0")}`;
 }
 
 function sumarDias(iso: string, dias: number) {
@@ -80,9 +94,9 @@ export function formatoFecha(iso: string) {
 
 export function edadTexto(nacimiento: string) {
   const n = new Date(nacimiento + "T12:00:00");
-  const hoy = new Date();
-  let meses = (hoy.getFullYear() - n.getFullYear()) * 12 + (hoy.getMonth() - n.getMonth());
-  if (hoy.getDate() < n.getDate()) meses -= 1;
+  const { anio, mes, dia } = partesDia();
+  let meses = (anio - n.getFullYear()) * 12 + (mes - n.getMonth());
+  if (dia < n.getDate()) meses -= 1;
   const anios = Math.floor(meses / 12);
   const rest = meses % 12;
   if (anios <= 0) return `${meses} ${meses === 1 ? "mes" : "meses"}`;

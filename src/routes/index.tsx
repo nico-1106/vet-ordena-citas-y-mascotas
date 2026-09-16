@@ -79,7 +79,7 @@ function Agenda() {
                     </p>
                     <p className="truncate text-sm text-muted-foreground">Dueño: {m?.dueno}</p>
                     <p className="mt-1 truncate text-sm text-secondary-foreground">{c.motivo}</p>
-                    <span className="mt-2 inline-block rounded-full bg-accent px-3 py-1 text-xs font-semibold text-accent-foreground">
+                    <span className="mt-2 inline-block rounded-md border border-border bg-muted px-2.5 py-0.5 text-xs font-medium text-foreground">
                       {c.veterinario}
                     </span>
                   </div>
