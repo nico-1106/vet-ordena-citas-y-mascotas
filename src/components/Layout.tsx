@@ -41,7 +41,9 @@ export function Layout({ children }: { children: ReactNode }) {
     <div className="mx-auto flex min-h-screen w-full max-w-2xl flex-col bg-background">
       <header className="sticky top-0 z-20 border-b border-border bg-card/95 px-4 py-3 backdrop-blur">
         <Link to="/" className="flex items-center gap-2">
-          <span className="flex h-9 w-9 items-center justify-center rounded-xl btn-primary text-base">🐾</span>
+          <span className="btn-primary flex h-9 w-9 items-center justify-center rounded-xl">
+            <IconHuella activo />
+          </span>
           <span className="font-display text-xl font-extrabold tracking-tight text-foreground">
             VetOrdena
           </span>
