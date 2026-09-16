@@ -117,7 +117,7 @@ export function proximaVacuna(m: Mascota): EstadoVacuna | null {
     } as EstadoVacuna;
   });
   calc.sort((a, b) => a.dias - b.dias);
-  return calc[0];
+  return calc[0] ?? null;
 }
 
 const HOY = hoyISO();
