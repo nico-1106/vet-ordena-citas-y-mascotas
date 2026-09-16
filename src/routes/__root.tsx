@@ -77,14 +77,14 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "VetOrdena — Agenda y historia clínica veterinaria" },
+      { title: "Animals — Agenda y historia clínica veterinaria" },
       {
         name: "description",
         content:
           "Agenda citas sin cruces y lleva el historial médico y de vacunación de cada mascota en tu consultorio veterinario.",
       },
       { name: "author", content: "VetOrdena" },
-      { property: "og:title", content: "VetOrdena — Agenda veterinaria" },
+      { property: "og:title", content: "Animals — Agenda veterinaria" },
       {
         property: "og:description",
         content: "Citas sin cruces e historia clínica de cada mascota, desde el celular o la tablet.",
