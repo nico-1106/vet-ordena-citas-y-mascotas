@@ -27,9 +27,20 @@ function Mascotas() {
   const { mascotas } = useDatos();
   const [q, setQ] = useState("");
   const texto = q.trim().toLowerCase();
-  const lista = mascotas.filter(
-    (m) => m.nombre.toLowerCase().includes(texto) || m.dueno.toLowerCase().includes(texto),
-  );
+
+  const lista = mascotas
+    .filter(
+      (m) => m.nombre.toLowerCase().includes(texto) || m.dueno.toLowerCase().includes(texto),
+    )
+    .sort((a, b) => {
+      const pvA = proximaVacuna(a);
+      const pvB = proximaVacuna(b);
+
+      const pesoA = pvA?.estado === "vencida" ? 1 : pvA?.estado === "proxima" ? 2 : 3;
+      const pesoB = pvB?.estado === "vencida" ? 1 : pvB?.estado === "proxima" ? 2 : 3;
+
+      return pesoA - pesoB;
+    });
 
   return (
     <Layout>
@@ -104,7 +115,7 @@ function Mascotas() {
 
       {lista.length === 0 && (
         <p className="card-soft mt-4 p-6 text-center text-sm text-muted-foreground">
-          No encontramos mascotas con “{q}”.
+          No encontramos mascotas con "{q}".
         </p>
       )}
     </Layout>
