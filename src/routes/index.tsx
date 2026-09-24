@@ -12,7 +12,7 @@ export const Route = createFileRoute("/")({
         content:
           "Agenda del día para consultorios veterinarios: citas por hora con mascota, dueño y veterinario asignado.",
       },
-      { property: "og:title", content: "Agenda del día | VetOrdena" },
+      { property: "og:title", content: "Agenda del día | Animals" },
       {
         property: "og:description",
         content: "Organiza las citas de tu consultorio veterinario sin cruces de horario.",
@@ -37,7 +37,7 @@ function Agenda() {
       <header className="flex flex-wrap items-end justify-between gap-3 border-b border-border pb-5">
         <div>
           <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-            Agenda del día
+            Agenda del día — Clinica Veterinaria NS
           </p>
           <h1 className="mt-1 text-2xl font-bold tracking-tight">{formatoFecha(hoy)}</h1>
         </div>
@@ -70,7 +70,7 @@ function Agenda() {
 
       {delDia.length === 0 ? (
         <p className="card-soft p-6 text-center text-sm text-muted-foreground">
-          Hoy no hay citas agendadas. Toca “+ Nueva cita” para programar la primera.
+          Hoy no hay citas agendadas. Toca "+ Nueva cita" para programar la primera.
         </p>
       ) : (
         <ul className="card-soft divide-y divide-border overflow-hidden">
