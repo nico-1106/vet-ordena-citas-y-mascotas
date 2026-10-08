@@ -1,7 +1,9 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Layout } from "@/components/Layout";
 import { IconEspecie } from "@/components/icons";
-import { useDatos, hoyISO, formatoFecha } from "@/lib/store";
+import { hoyISO, formatoFecha } from "@/lib/store";
+import { useCitasDelDia, especieUI } from "@/lib/db";
+import { Cargando, ErrorCarga } from "@/components/Estado";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -12,7 +14,9 @@ export const Route = createFileRoute("/")({
         content:
           "Agenda del día para consultorios veterinarios: citas por hora con mascota, dueño y veterinario asignado.",
       },
-      { property: "og:title", content: "Agenda del día | Animals" },
+      { property: "og:title", content: "Agenda del día | VetOrdena" },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
       {
         property: "og:description",
         content: "Organiza las citas de tu consultorio veterinario sin cruces de horario.",
@@ -23,11 +27,9 @@ export const Route = createFileRoute("/")({
 });
 
 function Agenda() {
-  const { citas, mascotas } = useDatos();
   const hoy = hoyISO();
-  const delDia = citas
-    .filter((c) => c.fecha === hoy)
-    .sort((a, b) => a.hora.localeCompare(b.hora));
+  const q = useCitasDelDia(hoy);
+  const delDia = q.data ?? [];
 
   const vets = new Set(delDia.map((c) => c.veterinario));
   const proxima = delDia[0];
@@ -51,8 +53,8 @@ function Agenda() {
 
       <dl className="grid grid-cols-3 divide-x divide-border border-b border-border">
         {[
-          { k: "Citas de hoy", v: String(delDia.length) },
-          { k: "Veterinarios", v: String(vets.size) },
+          { k: "Citas de hoy", v: q.data ? String(delDia.length) : "—" },
+          { k: "Veterinarios", v: q.data ? String(vets.size) : "—" },
           { k: "Primera cita", v: proxima?.hora ?? "—" },
         ].map((s) => (
           <div key={s.k} className="px-1 py-4 first:pl-0 lg:px-5">
@@ -68,19 +70,23 @@ function Agenda() {
         Citas programadas
       </h2>
 
-      {delDia.length === 0 ? (
+      {q.isPending ? (
+        <Cargando texto="Cargando citas…" />
+      ) : q.isError ? (
+        <ErrorCarga error={q.error} reintentar={() => q.refetch()} />
+      ) : delDia.length === 0 ? (
         <p className="card-soft p-6 text-center text-sm text-muted-foreground">
           Hoy no hay citas agendadas. Toca "+ Nueva cita" para programar la primera.
         </p>
       ) : (
         <ul className="card-soft divide-y divide-border overflow-hidden">
           {delDia.map((c) => {
-            const m = mascotas.find((x) => x.id === c.mascotaId);
+            const m = c.mascotas;
             return (
               <li key={c.id}>
                 <Link
                   to="/mascotas/$id"
-                  params={{ id: c.mascotaId }}
+                  params={{ id: c.mascota_id }}
                   className="flex items-center gap-4 px-4 py-4 transition-colors hover:bg-muted/60 lg:px-5"
                 >
                   <div className="w-16 shrink-0 border-r border-border pr-4 text-right lg:w-20">
@@ -90,7 +96,7 @@ function Agenda() {
                   </div>
 
                   <span className="hidden h-10 w-10 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground sm:flex">
-                    <IconEspecie especie={m?.especie ?? "Perro"} className="h-6 w-6" />
+                    <IconEspecie especie={especieUI(m?.especie ?? null)} className="h-6 w-6" />
                   </span>
 
                   <div className="min-w-0 flex-1">
@@ -98,14 +104,14 @@ function Agenda() {
                       {m?.nombre ?? "Mascota"}
                     </p>
                     <p className="truncate text-sm text-muted-foreground">
-                      {m?.especie}
-                      {m?.raza ? ` · ${m.raza}` : ""} · Dueño: {m?.dueno}
+                      {m?.especie ?? "Especie sin registrar"}
+                      {m?.raza ? ` · ${m.raza}` : ""} · Dueño: {m?.dueno_nombre ?? "—"}
                     </p>
-                    <p className="mt-1.5 truncate text-sm text-secondary-foreground">{c.motivo}</p>
+                    <p className="mt-1.5 truncate text-sm text-secondary-foreground">{c.motivo || "Sin motivo registrado"}</p>
                   </div>
 
                   <span className="hidden shrink-0 rounded-md border border-border bg-muted px-2.5 py-1 text-xs font-medium text-foreground md:block">
-                    {c.veterinario}
+                    {c.veterinario ?? "Sin veterinario"}
                   </span>
                 </Link>
               </li>
