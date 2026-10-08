@@ -1,16 +1,10 @@
 import { createFileRoute, Link, useParams } from "@tanstack/react-router";
 import { useState } from "react";
 import { Layout } from "@/components/Layout";
-import {
-  useDatos,
-  edadTexto,
-  proximaVacuna,
-  formatoFecha,
-  hoyISO,
-  agregarTratamiento,
-  VETERINARIOS,
-  sumarMeses,
-} from "@/lib/store";
+import { IconEspecie } from "@/components/icons";
+import { Cargando, ErrorCarga } from "@/components/Estado";
+import { formatoFecha, hoyISO } from "@/lib/store";
+import { useMascota, useCitasDeMascota, especieUI } from "@/lib/db";
 
 export const Route = createFileRoute("/mascotas/$id")({
   head: () => ({
@@ -22,6 +16,8 @@ export const Route = createFileRoute("/mascotas/$id")({
           "Datos básicos, historial de tratamientos, vacunas aplicadas y fecha de la próxima vacuna.",
       },
       { property: "og:title", content: "Historia clínica de la mascota | VetOrdena" },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
       {
         property: "og:description",
         content: "Consulta tratamientos y vacunas de cada mascota del consultorio.",
@@ -33,12 +29,15 @@ export const Route = createFileRoute("/mascotas/$id")({
 
 function Detalle() {
   const { id } = useParams({ from: "/mascotas/$id" });
-  const { mascotas } = useDatos();
-  const m = mascotas.find((x) => x.id === id);
-  const [abierto, setAbierto] = useState(false);
-  const [desc, setDesc] = useState("");
-  const [vet, setVet] = useState(VETERINARIOS[0]!);
+  const qm = useMascota(id);
+  const qc = useCitasDeMascota(id);
+  const [aviso, setAviso] = useState(false);
 
+  if (qm.isPending) return <Layout><Cargando texto="Cargando mascota…" /></Layout>;
+  if (qm.isError)
+    return <Layout><ErrorCarga error={qm.error} reintentar={() => qm.refetch()} /></Layout>;
+
+  const m = qm.data;
   if (!m) {
     return (
       <Layout>
@@ -52,7 +51,11 @@ function Detalle() {
     );
   }
 
-  const pv = proximaVacuna(m);
+  const hoy = hoyISO();
+  const citas = qc.data ?? [];
+  const proximas = citas.filter((c) => c.fecha >= hoy).reverse();
+  const pasadas = citas.filter((c) => c.fecha < hoy);
+  const sinDato = "Sin registrar";
 
   return (
     <Layout>
@@ -62,52 +65,31 @@ function Detalle() {
 
       <section className="card-soft mt-3 p-5">
         <div className="flex items-center gap-4">
-          <span className="flex h-16 w-16 items-center justify-center rounded-full bg-primary-soft text-3xl">
-            {m.especie === "Gato" ? "🐈" : "🐕"}
+          <span className="flex h-16 w-16 items-center justify-center rounded-full bg-primary-soft text-primary">
+            <IconEspecie especie={especieUI(m.especie)} className="h-8 w-8" />
           </span>
           <div className="min-w-0">
             <h1 className="truncate text-2xl font-extrabold">{m.nombre}</h1>
             <p className="text-sm text-muted-foreground">
-              {m.especie} · {m.raza} · {m.sexo}
+              {m.especie ?? "Especie sin registrar"} · {m.raza || "Raza sin registrar"}
             </p>
           </div>
         </div>
 
         <dl className="mt-4 grid grid-cols-2 gap-3 text-sm">
-          <div className="rounded-lg bg-muted px-3 py-2">
-            <dt className="text-muted-foreground">Edad</dt>
-            <dd className="font-bold">{edadTexto(m.nacimiento)}</dd>
-          </div>
-          <div className="rounded-lg bg-muted px-3 py-2">
-            <dt className="text-muted-foreground">Peso</dt>
-            <dd className="font-bold">{m.peso}</dd>
-          </div>
-          <div className="rounded-lg bg-muted px-3 py-2">
-            <dt className="text-muted-foreground">Dueño</dt>
-            <dd className="font-bold">{m.dueno}</dd>
-          </div>
-          <div className="rounded-lg bg-muted px-3 py-2">
-            <dt className="text-muted-foreground">Celular</dt>
-            <dd className="font-bold">{m.telefono || "—"}</dd>
-          </div>
+          {[
+            { k: "Dueño", v: m.dueno_nombre || sinDato },
+            { k: "Celular", v: m.dueno_telefono || sinDato },
+            { k: "Registrada", v: formatoFecha(m.created_at.slice(0, 10)) },
+            { k: "Edad / peso", v: sinDato },
+          ].map((d) => (
+            <div key={d.k} className="rounded-lg bg-muted px-3 py-2">
+              <dt className="text-muted-foreground">{d.k}</dt>
+              <dd className="font-bold">{d.v}</dd>
+            </div>
+          ))}
         </dl>
       </section>
-
-      {pv && (
-        <p
-          className={`mt-4 rounded-xl px-4 py-3 text-sm font-semibold ${
-            pv.estado === "vencida"
-              ? "bg-destructive/10 text-destructive"
-              : pv.estado === "proxima"
-                ? "bg-warning-soft text-warning"
-                : "bg-success-soft text-success"
-          }`}
-        >
-          {pv.estado === "vencida"
-            ? `⚠️ La vacuna ${pv.nombre} está vencida desde el ${formatoFecha(pv.proxima)}.`
-            : `Próxima vacuna: ${pv.nombre} el ${formatoFecha(pv.proxima)} (en ${pv.dias} días).`}
-        </p>
-      )}
 
       <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
         <Link
@@ -119,85 +101,64 @@ function Detalle() {
         </Link>
         <button
           type="button"
-          onClick={() => setAbierto((v) => !v)}
+          onClick={() => setAviso((v) => !v)}
           className="btn-outline px-5 py-4 text-base"
         >
           Registrar tratamiento
         </button>
       </div>
 
-      {abierto && (
-        <div className="card-soft mt-3 space-y-3 p-4">
-          <textarea
-            rows={3}
-            value={desc}
-            onChange={(e) => setDesc(e.target.value)}
-            placeholder="¿Qué se le hizo hoy a la mascota?"
-            className="w-full rounded-xl border border-input bg-card px-4 py-3 text-base outline-none focus:border-ring focus:ring-2 focus:ring-ring/30"
-          />
-          <select
-            value={vet}
-            onChange={(e) => setVet(e.target.value)}
-            className="w-full rounded-xl border border-input bg-card px-4 py-3 text-base outline-none focus:border-ring"
-          >
-            {VETERINARIOS.map((v) => (
-              <option key={v} value={v}>
-                {v}
-              </option>
-            ))}
-          </select>
-          <button
-            type="button"
-            className="btn-primary w-full px-5 py-3"
-            onClick={() => {
-              if (!desc.trim()) return;
-              agregarTratamiento(m.id, {
-                fecha: hoyISO(),
-                descripcion: desc.trim(),
-                veterinario: vet,
-              });
-              setDesc("");
-              setAbierto(false);
-            }}
-          >
-            Guardar tratamiento
-          </button>
-        </div>
+      {aviso && (
+        <p className="card-soft mt-3 p-4 text-sm text-muted-foreground">
+          El registro de tratamientos y vacunas todavía no está disponible: la base de datos aún
+          no tiene una tabla para guardarlos. Por ahora, anota el motivo al agendar la cita.
+        </p>
       )}
 
-      <h2 className="mt-6 mb-3 text-lg font-bold">Vacunas aplicadas</h2>
-      {m.vacunas.length === 0 ? (
-        <p className="card-soft p-4 text-sm text-muted-foreground">Sin vacunas registradas.</p>
+      <h2 className="mt-6 mb-3 text-lg font-bold">Próxima vacuna</h2>
+      <p className="card-soft p-4 text-sm text-muted-foreground">
+        Sin vacunas registradas en el sistema.
+      </p>
+
+      <h2 className="mt-6 mb-3 text-lg font-bold">Próximas citas</h2>
+      {qc.isPending ? (
+        <Cargando texto="Cargando citas…" />
+      ) : qc.isError ? (
+        <ErrorCarga error={qc.error} reintentar={() => qc.refetch()} />
+      ) : proximas.length === 0 ? (
+        <p className="card-soft p-4 text-sm text-muted-foreground">No tiene citas próximas.</p>
       ) : (
-        <ul className="space-y-3">
-          {m.vacunas.map((v) => (
-            <li key={v.id} className="card-soft p-4">
-              <p className="font-bold">{v.nombre}</p>
-              <p className="text-sm text-muted-foreground">Aplicada el {formatoFecha(v.fecha)}</p>
-              <p className="text-sm text-secondary-foreground">
-                Refuerzo: {formatoFecha(sumarMeses(v.fecha, v.refuerzoMeses))}
-              </p>
-            </li>
-          ))}
-        </ul>
+        <ListaCitas citas={proximas} />
       )}
 
-      <h2 className="mt-6 mb-3 text-lg font-bold">Historial de tratamientos</h2>
-      {m.tratamientos.length === 0 ? (
+      <h2 className="mt-6 mb-3 text-lg font-bold">Historial de consultas</h2>
+      {qc.isPending ? null : qc.isError ? null : pasadas.length === 0 ? (
         <p className="card-soft p-4 text-sm text-muted-foreground">
-          Todavía no hay tratamientos registrados.
+          Todavía no hay consultas anteriores.
         </p>
       ) : (
-        <ul className="space-y-3">
-          {m.tratamientos.map((t) => (
-            <li key={t.id} className="card-soft p-4">
-              <p className="text-sm font-bold text-primary">{formatoFecha(t.fecha)}</p>
-              <p className="mt-1">{t.descripcion}</p>
-              <p className="mt-1 text-sm text-muted-foreground">{t.veterinario}</p>
-            </li>
-          ))}
-        </ul>
+        <ListaCitas citas={pasadas} />
       )}
     </Layout>
+  );
+}
+
+function ListaCitas({
+  citas,
+}: {
+  citas: { id: number; fecha: string; hora: string; motivo: string | null; veterinario: string | null }[];
+}) {
+  return (
+    <ul className="space-y-3">
+      {citas.map((c) => (
+        <li key={c.id} className="card-soft p-4">
+          <p className="text-sm font-bold text-primary">
+            {formatoFecha(c.fecha)} · {c.hora}
+          </p>
+          <p className="mt-1">{c.motivo || "Sin motivo registrado"}</p>
+          <p className="mt-1 text-sm text-muted-foreground">{c.veterinario ?? "Sin veterinario"}</p>
+        </li>
+      ))}
+    </ul>
   );
 }
