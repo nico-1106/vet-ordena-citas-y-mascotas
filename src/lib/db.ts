@@ -43,6 +43,7 @@ export function mensajeError(e: unknown): string {
     return "No pudimos conectarnos con la base de datos. Revisa tu conexión a internet e inténtalo de nuevo.";
   if (/row-level security|permission denied|42501/i.test(msg))
     return "La base de datos rechazó la operación por permisos. Revisa las políticas de seguridad de la tabla.";
+  if (e instanceof Error) return msg;
   return `Ocurrió un error con la base de datos: ${msg}`;
 }
 
