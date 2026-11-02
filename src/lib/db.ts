@@ -80,17 +80,31 @@ function mapCitas(rows: unknown[]): CitaUI[] {
 
 // ---------- Consultas ----------
 
-export function useMascotas() {
+export function useMascotas(search?: string, especie?: string) {
   return useQuery({
-    queryKey: ["mascotas"],
+    queryKey: ["mascotas", search, especie],
     queryFn: async () => {
-      const { data, error } = await cliente()
+      let query = cliente()
         .from("mascotas")
         .select("id, created_at, nombre, especie, raza, nacimiento, dueno_nombre, dueno_telefono")
         .order("nombre");
+
+      if (search) {
+        const cleaned = search.replace(/[,()%]/g, "").trim();
+        if (cleaned) {
+          query = query.or(`nombre.ilike.%${cleaned}%,dueno_nombre.ilike.%${cleaned}%`);
+        }
+      }
+
+      if (especie && especie !== "Todas") {
+        query = query.ilike("especie", `${especie}%`);
+      }
+
+      const { data, error } = await query;
       if (error) throw error;
       return (data ?? []) as MascotaDB[];
     },
+    placeholderData: (previousData) => previousData,
     retry: 1,
   });
 }
