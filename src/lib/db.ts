@@ -11,6 +11,7 @@ export type MascotaDB = {
   nombre: string;
   especie: string | null;
   raza: string | null;
+  nacimiento: string | null;
   dueno_nombre: string | null;
   dueno_telefono: string | null;
 };
@@ -22,7 +23,7 @@ export type CitaDB = {
   fecha_hora: string;
   motivo: string | null;
   veterinario: string | null;
-  mascotas: Pick<MascotaDB, "id" | "nombre" | "especie" | "raza" | "dueno_nombre"> | null;
+  mascotas: Pick<MascotaDB, "id" | "nombre" | "especie" | "raza" | "nacimiento" | "dueno_nombre"> | null;
 };
 
 export type CitaUI = CitaDB & { fecha: string; hora: string };
@@ -37,7 +38,11 @@ function cliente() {
 }
 
 export function mensajeError(e: unknown): string {
-  const msg = e instanceof Error ? e.message : String((e as { message?: string })?.message ?? e);
+  const errObj = e as { code?: string | number; message?: string } | null;
+  const msg = e instanceof Error ? e.message : String(errObj?.message ?? e);
+  const code = errObj?.code;
+  if (String(code) === "23505" || /citas_vet_hora_uniq/i.test(msg))
+    return "Ese veterinario ya tiene una cita a esa hora. Elige otra hora u otro veterinario.";
   if (msg === SUPABASE_SIN_CONFIGURAR) return msg;
   if (/failed to fetch|network|load failed/i.test(msg))
     return "No pudimos conectarnos con la base de datos. Revisa tu conexión a internet e inténtalo de nuevo.";
@@ -67,7 +72,7 @@ function partes(iso: string) {
 }
 
 const SELECT_CITA =
-  "id, created_at, mascota_id, fecha_hora, motivo, veterinario, mascotas(id, nombre, especie, raza, dueno_nombre)";
+  "id, created_at, mascota_id, fecha_hora, motivo, veterinario, mascotas(id, nombre, especie, raza, nacimiento, dueno_nombre)";
 
 function mapCitas(rows: unknown[]): CitaUI[] {
   return (rows as CitaDB[]).map((c) => ({ ...c, ...partes(c.fecha_hora) }));
@@ -81,7 +86,7 @@ export function useMascotas() {
     queryFn: async () => {
       const { data, error } = await cliente()
         .from("mascotas")
-        .select("id, created_at, nombre, especie, raza, dueno_nombre, dueno_telefono")
+        .select("id, created_at, nombre, especie, raza, nacimiento, dueno_nombre, dueno_telefono")
         .order("nombre");
       if (error) throw error;
       return (data ?? []) as MascotaDB[];
@@ -96,7 +101,7 @@ export function useMascota(id: string) {
     queryFn: async () => {
       const { data, error } = await cliente()
         .from("mascotas")
-        .select("id, created_at, nombre, especie, raza, dueno_nombre, dueno_telefono")
+        .select("id, created_at, nombre, especie, raza, nacimiento, dueno_nombre, dueno_telefono")
         .eq("id", id)
         .maybeSingle();
       if (error) throw error;
@@ -150,6 +155,7 @@ export function useCrearCita() {
         nombre: string;
         especie: string;
         raza: string | null;
+        nacimiento: string | null;
         dueno_nombre: string;
         dueno_telefono: string | null;
       };
@@ -161,6 +167,10 @@ export function useCrearCita() {
     }) => {
       const db = cliente();
       const fecha_hora = aFechaHora(input.fecha, input.hora);
+
+      if (new Date(fecha_hora).getTime() < Date.now()) {
+        throw new Error("No puedes agendar una cita en el pasado");
+      }
 
       // Revalidar en la base de datos que el veterinario siga libre a esa hora.
       const { data: choque, error: errChoque } = await db
@@ -176,6 +186,7 @@ export function useCrearCita() {
         );
 
       let mascotaId = input.mascotaId;
+      let mascotaCreadaId: string | null = null;
       if (input.nuevaMascota) {
         const { data, error } = await db
           .from("mascotas")
@@ -184,6 +195,7 @@ export function useCrearCita() {
           .single();
         if (error) throw error;
         mascotaId = (data as { id: string }).id;
+        mascotaCreadaId = mascotaId;
       }
       if (!mascotaId) throw new Error("Selecciona una mascota.");
 
@@ -193,7 +205,12 @@ export function useCrearCita() {
         motivo: input.motivo,
         veterinario: input.veterinario,
       });
-      if (error) throw error;
+      if (error) {
+        if (mascotaCreadaId) {
+          await db.from("mascotas").delete().eq("id", mascotaCreadaId);
+        }
+        throw error;
+      }
       return mascotaId;
     },
     onSettled: () => {
