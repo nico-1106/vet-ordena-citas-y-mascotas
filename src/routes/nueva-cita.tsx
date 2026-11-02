@@ -1,4 +1,3 @@
-
 import {
   createFileRoute,
   useNavigate,
@@ -18,6 +17,7 @@ import {
   useCitasDelDia,
   useCrearCita,
   mensajeError,
+  aFechaHora,
 } from "@/lib/db";
 
 type Busqueda = { mascota?: string | undefined };
@@ -142,6 +142,12 @@ function NuevaCita() {
       return;
     }
 
+    const fecha_hora = aFechaHora(fecha, hora);
+    if (new Date(fecha_hora).getTime() < Date.now()) {
+      setError("No puedes agendar una cita en el pasado");
+      return;
+    }
+
     if (choque) {
       setError(
         `${veterinario} ya tiene una cita a las ${hora} el ${formatoFecha(fecha)}. Elige otra hora u otro veterinario.`,
@@ -178,6 +184,7 @@ function NuevaCita() {
                 nombre: nueva.nombre.trim(),
                 especie: nueva.especie,
                 raza: nueva.raza.trim() || null,
+                nacimiento: nueva.nacimiento || null,
                 dueno_nombre: nueva.dueno.trim(),
                 dueno_telefono: nueva.telefono.trim() || null,
               }
@@ -394,6 +401,7 @@ function NuevaCita() {
             <input
               id="fecha"
               type="date"
+              min={hoyISO()}
               className={campo}
               value={fecha}
               onChange={(e) => {
