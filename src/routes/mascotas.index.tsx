@@ -27,16 +27,11 @@ export const Route = createFileRoute("/mascotas/")({
 });
 
 function Mascotas() {
-  const qm = useMascotas();
-  const mascotas = qm.data ?? [];
   const [q, setQ] = useState("");
-  const texto = q.trim().toLowerCase();
-
-  const lista = mascotas.filter(
-    (m) =>
-      m.nombre.toLowerCase().includes(texto) ||
-      (m.dueno_nombre ?? "").toLowerCase().includes(texto),
-  );
+  const [especie, setEspecie] = useState("Todas");
+  const qm = useMascotas(q, especie);
+  const mascotas = qm.data ?? [];
+  const lista = mascotas;
 
   return (
     <Layout>
@@ -46,7 +41,9 @@ function Mascotas() {
         </p>
         <h1 className="mt-1 text-2xl font-bold tracking-tight">Mascotas</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          {qm.data ? `${mascotas.length} mascotas registradas en el consultorio` : "Consultando registros…"}
+          {qm.data
+  ? `${mascotas.length} ${q.trim() || especie !== "Todas" ? "mascotas encontradas" : "mascotas registradas en el consultorio"}`
+  : "Consultando registros…"}
         </p>
       </header>
 
@@ -56,6 +53,21 @@ function Mascotas() {
         placeholder="Buscar por mascota o dueño…"
         className="mt-5 w-full rounded-lg border border-input bg-card px-4 py-3 text-base outline-none focus:border-ring focus:ring-2 focus:ring-ring/25"
       />
+
+      <div className="mt-3 grid grid-cols-3 gap-2">
+        {(["Todas", "Perro", "Gato"] as const).map((esp) => (
+          <button
+            key={esp}
+            type="button"
+            onClick={() => setEspecie(esp)}
+            className={`${
+              especie === esp ? "btn-primary" : "btn-outline"
+            } px-3 py-3 text-sm font-bold`}
+          >
+            {esp}
+          </button>
+        ))}
+      </div>
 
       {qm.isPending ? (
         <div className="mt-4"><Cargando texto="Cargando mascotas…" /></div>
@@ -95,9 +107,9 @@ function Mascotas() {
 
           {lista.length === 0 && (
             <p className="card-soft mt-4 p-6 text-center text-sm text-muted-foreground">
-              {mascotas.length === 0
-                ? "Todavía no hay mascotas registradas. Regístrala al crear una nueva cita."
-                : `No encontramos mascotas con "${q}".`}
+              {q.trim() || especie !== "Todas"
+                ? `No encontramos mascotas${q.trim() ? ` con "${q}"` : ""}.`
+                : "Todavía no hay mascotas registradas. Regístrala al crear una nueva cita."}
             </p>
           )}
         </>
