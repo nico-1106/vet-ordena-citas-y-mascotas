@@ -16,6 +16,8 @@ export type MascotaDB = {
   dueno_telefono: string | null;
 };
 
+export type EstadoCita = "pendiente" | "atendida" | "cancelada"; // NUEVO
+
 export type CitaDB = {
   id: number;
   created_at: string;
@@ -23,6 +25,7 @@ export type CitaDB = {
   fecha_hora: string;
   motivo: string | null;
   veterinario: string | null;
+  estado: EstadoCita; // NUEVO
   mascotas: Pick<MascotaDB, "id" | "nombre" | "especie" | "raza" | "nacimiento" | "dueno_nombre"> | null;
 };
 
@@ -72,7 +75,7 @@ function partes(iso: string) {
 }
 
 const SELECT_CITA =
-  "id, created_at, mascota_id, fecha_hora, motivo, veterinario, mascotas(id, nombre, especie, raza, nacimiento, dueno_nombre)";
+  "id, created_at, mascota_id, fecha_hora, motivo, veterinario, estado, mascotas(id, nombre, especie, raza, nacimiento, dueno_nombre)"; // CAMBIO: se agregó estado
 
 function mapCitas(rows: unknown[]): CitaUI[] {
   return (rows as CitaDB[]).map((c) => ({ ...c, ...partes(c.fecha_hora) }));
@@ -230,6 +233,27 @@ export function useCrearCita() {
     onSettled: () => {
       qc.invalidateQueries({ queryKey: ["citas"] });
       qc.invalidateQueries({ queryKey: ["mascotas"] });
+    },
+  });
+}
+
+// ---------- Actualizaciones ---------- (NUEVO)
+
+export function useActualizarEstadoCita() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: { id: number; estado: EstadoCita }) => {
+      const { data, error } = await cliente()
+        .from("citas")
+        .update({ estado: input.estado })
+        .eq("id", input.id)
+        .select("id");
+      if (error) throw error;
+      if (!data || data.length === 0)
+        throw new Error("No se pudo actualizar la cita.");
+    },
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: ["citas"] });
     },
   });
 }
