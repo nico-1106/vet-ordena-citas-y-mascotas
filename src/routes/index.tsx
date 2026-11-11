@@ -4,6 +4,7 @@ import { IconEspecie } from "@/components/icons";
 import { hoyISO, formatoFecha } from "@/lib/store";
 import { useCitasDelDia, especieUI } from "@/lib/db";
 import { Cargando, ErrorCarga } from "@/components/Estado";
+import { EstadoCitaSelect } from "@/components/EstadoCitaSelect"; // NUEVO
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -83,11 +84,14 @@ function Agenda() {
           {delDia.map((c) => {
             const m = c.mascotas;
             return (
-              <li key={c.id}>
+              <li
+                key={c.id}
+                className="flex items-center transition-colors hover:bg-muted/60" // CAMBIO: antes era solo <li key={c.id}>
+              >
                 <Link
                   to="/mascotas/$id"
                   params={{ id: c.mascota_id }}
-                  className="flex items-center gap-4 px-4 py-4 transition-colors hover:bg-muted/60 lg:px-5"
+                  className="flex min-w-0 flex-1 items-center gap-4 px-4 py-4 lg:px-5" // CAMBIO: se quitó el hover de aquí y se agregó min-w-0 flex-1
                 >
                   <div className="w-16 shrink-0 border-r border-border pr-4 text-right lg:w-20">
                     <p className="text-2xl font-bold tabular-nums tracking-tight lg:text-3xl">
@@ -114,6 +118,11 @@ function Agenda() {
                     {c.veterinario ?? "Sin veterinario"}
                   </span>
                 </Link>
+
+                {/* NUEVO: el menú queda fuera del Link para que al tocarlo no cambie de página */}
+                <div className="shrink-0 pr-4 lg:pr-5">
+                  <EstadoCitaSelect id={c.id} estado={c.estado} />
+                </div>
               </li>
             );
           })}
