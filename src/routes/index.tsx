@@ -4,7 +4,8 @@ import { IconEspecie } from "@/components/icons";
 import { hoyISO, formatoFecha } from "@/lib/store";
 import { useCitasDelDia, especieUI } from "@/lib/db";
 import { Cargando, ErrorCarga } from "@/components/Estado";
-import { EstadoCitaSelect } from "@/components/EstadoCitaSelect"; // NUEVO
+import { EstadoCitaSelect } from "@/components/EstadoCitaSelect";
+import { AsistenteIA } from "@/components/AsistenteIA";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -86,12 +87,12 @@ function Agenda() {
             return (
               <li
                 key={c.id}
-                className="flex items-center transition-colors hover:bg-muted/60" // CAMBIO: antes era solo <li key={c.id}>
+                className="flex items-center transition-colors hover:bg-muted/60"
               >
                 <Link
                   to="/mascotas/$id"
                   params={{ id: c.mascota_id }}
-                  className="flex min-w-0 flex-1 items-center gap-4 px-4 py-4 lg:px-5" // CAMBIO: se quitó el hover de aquí y se agregó min-w-0 flex-1
+                  className="flex min-w-0 flex-1 items-center gap-4 px-4 py-4 lg:px-5"
                 >
                   <div className="w-16 shrink-0 border-r border-border pr-4 text-right lg:w-20">
                     <p className="text-2xl font-bold tabular-nums tracking-tight lg:text-3xl">
@@ -111,7 +112,9 @@ function Agenda() {
                       {m?.especie ?? "Especie sin registrar"}
                       {m?.raza ? ` · ${m.raza}` : ""} · Dueño: {m?.dueno_nombre ?? "—"}
                     </p>
-                    <p className="mt-1.5 truncate text-sm text-secondary-foreground">{c.motivo || "Sin motivo registrado"}</p>
+                    <p className="mt-1.5 truncate text-sm text-secondary-foreground">
+                      {c.motivo || "Sin motivo registrado"}
+                    </p>
                   </div>
 
                   <span className="hidden shrink-0 rounded-md border border-border bg-muted px-2.5 py-1 text-xs font-medium text-foreground md:block">
@@ -119,16 +122,15 @@ function Agenda() {
                   </span>
                 </Link>
 
-                {/* NUEVO: el menú queda fuera del Link para que al tocarlo no cambie de página */}
                 <div className="shrink-0 pr-4 lg:pr-5">
                   <EstadoCitaSelect id={c.id} estado={c.estado} />
-                  import { AsistenteIA } from "@/components/AsistenteIA";
                 </div>
               </li>
             );
           })}
         </ul>
       )}
+
       <AsistenteIA />
     </Layout>
   );
