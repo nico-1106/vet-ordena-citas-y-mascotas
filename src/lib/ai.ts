@@ -1,6 +1,6 @@
 import { obtenerDatosParaIA } from "@/lib/db";
 import { hoyISO } from "@/lib/store";
-const MODELO = "PON_AQUI_EL_MODELO";
+const MODELO = "gemini-3-flash-preview";
 
 export async function consultarAsistenteIA(pregunta: string): Promise<string> {
   const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
