@@ -1,10 +1,17 @@
 import { createFileRoute, Link, useParams } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, type FormEvent } from "react"; // CAMBIO: se agregó FormEvent
 import { Layout } from "@/components/Layout";
 import { IconEspecie } from "@/components/icons";
 import { Cargando, ErrorCarga } from "@/components/Estado";
 import { formatoFecha, hoyISO } from "@/lib/store";
-import { useMascota, useCitasDeMascota, especieUI } from "@/lib/db";
+import {
+  useMascota,
+  useCitasDeMascota,
+  useTratamientosDeMascota, // NUEVO
+  useCrearTratamiento, // NUEVO
+  mensajeError, // NUEVO
+  especieUI,
+} from "@/lib/db";
 
 export const Route = createFileRoute("/mascotas/$id")({
   head: () => ({
@@ -31,7 +38,17 @@ function Detalle() {
   const { id } = useParams({ from: "/mascotas/$id" });
   const qm = useMascota(id);
   const qc = useCitasDeMascota(id);
-  const [aviso, setAviso] = useState(false);
+
+  // NUEVO: tratamientos y formulario (los hooks van aquí arriba, antes de los return)
+  const qt = useTratamientosDeMascota(id);
+  const crear = useCrearTratamiento();
+  const [formAbierto, setFormAbierto] = useState(false);
+  const [tipo, setTipo] = useState<"vacuna" | "tratamiento">("vacuna");
+  const [nombre, setNombre] = useState("");
+  const [fechaTrat, setFechaTrat] = useState(hoyISO());
+  const [proxima, setProxima] = useState("");
+  const [notas, setNotas] = useState("");
+  const [errorForm, setErrorForm] = useState<string | null>(null);
 
   if (qm.isPending) return <Layout><Cargando texto="Cargando mascota…" /></Layout>;
   if (qm.isError)
@@ -56,6 +73,56 @@ function Detalle() {
   const proximas = citas.filter((c) => c.fecha >= hoy).reverse();
   const pasadas = citas.filter((c) => c.fecha < hoy);
   const sinDato = "Sin registrar";
+
+  // NUEVO: lista de tratamientos y próxima vacuna
+  const tratamientos = qt.data ?? [];
+  const proximaVacuna = tratamientos
+    .filter((t) => t.tipo === "vacuna" && t.proxima_fecha && t.proxima_fecha >= hoy)
+    .sort((a, b) => a.proxima_fecha!.localeCompare(b.proxima_fecha!))[0];
+  const hayVacunas = tratamientos.some((t) => t.tipo === "vacuna");
+
+  // NUEVO: guardar el tratamiento
+  function guardar(e: FormEvent) {
+    e.preventDefault();
+    setErrorForm(null);
+
+    if (!nombre.trim()) {
+      setErrorForm("Escribe el nombre de la vacuna o del tratamiento.");
+      return;
+    }
+    if (!fechaTrat) {
+      setErrorForm("Elige la fecha en que se aplicó.");
+      return;
+    }
+    if (proxima && proxima < fechaTrat) {
+      setErrorForm("La próxima fecha no puede ser anterior a la fecha de aplicación.");
+      return;
+    }
+
+    crear.mutate(
+      {
+        mascota_id: id,
+        tipo,
+        nombre: nombre.trim(),
+        fecha: fechaTrat,
+        notas: notas.trim() || null,
+        proxima_fecha: proxima || null,
+      },
+      {
+        onSuccess: () => {
+          setNombre("");
+          setNotas("");
+          setProxima("");
+          setFechaTrat(hoyISO());
+          setFormAbierto(false);
+        },
+        onError: (err) => setErrorForm(mensajeError(err)),
+      },
+    );
+  }
+
+  const campo =
+    "w-full rounded-md border border-border bg-background px-3 py-2 text-sm";
 
   return (
     <Layout>
@@ -101,64 +168,81 @@ function Detalle() {
         </Link>
         <button
           type="button"
-          onClick={() => setAviso((v) => !v)}
+          onClick={() => setFormAbierto((v) => !v)} // CAMBIO: antes abría el aviso
           className="btn-outline px-5 py-4 text-base"
         >
           Registrar tratamiento
         </button>
       </div>
 
-      {aviso && (
-        <p className="card-soft mt-3 p-4 text-sm text-muted-foreground">
-          El registro de tratamientos y vacunas todavía no está disponible: la base de datos aún
-          no tiene una tabla para guardarlos. Por ahora, anota el motivo al agendar la cita.
-        </p>
+      {/* CAMBIO: aquí estaba el aviso de "no disponible"; ahora va el formulario */}
+      {formAbierto && (
+        <form onSubmit={guardar} className="card-soft mt-3 space-y-3 p-4">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <label className="text-sm">
+              <span className="mb-1 block font-semibold">Tipo</span>
+              <select
+                value={tipo}
+                onChange={(e) => setTipo(e.target.value as "vacuna" | "tratamiento")}
+                className={campo}
+              >
+                <option value="vacuna">Vacuna</option>
+                <option value="tratamiento">Tratamiento</option>
+              </select>
+            </label>
+            <label className="text-sm">
+              <span className="mb-1 block font-semibold">Nombre</span>
+              <input
+                type="text"
+                value={nombre}
+                onChange={(e) => setNombre(e.target.value)}
+                placeholder="Ej: Rabia, desparasitación"
+                className={campo}
+              />
+            </label>
+            <label className="text-sm">
+              <span className="mb-1 block font-semibold">Fecha de aplicación</span>
+              <input
+                type="date"
+                value={fechaTrat}
+                onChange={(e) => setFechaTrat(e.target.value)}
+                className={campo}
+              />
+            </label>
+            <label className="text-sm">
+              <span className="mb-1 block font-semibold">Próxima fecha (opcional)</span>
+              <input
+                type="date"
+                value={proxima}
+                onChange={(e) => setProxima(e.target.value)}
+                className={campo}
+              />
+            </label>
+          </div>
+          <label className="block text-sm">
+            <span className="mb-1 block font-semibold">Notas (opcional)</span>
+            <textarea
+              value={notas}
+              onChange={(e) => setNotas(e.target.value)}
+              rows={2}
+              className={campo}
+            />
+          </label>
+
+          {errorForm && <p className="text-sm text-red-600">{errorForm}</p>}
+
+          <button
+            type="submit"
+            disabled={crear.isPending}
+            className="btn-primary px-5 py-3 text-base"
+          >
+            {crear.isPending ? "Guardando…" : "Guardar"}
+          </button>
+        </form>
       )}
 
       <h2 className="mt-6 mb-3 text-lg font-bold">Próxima vacuna</h2>
-      <p className="card-soft p-4 text-sm text-muted-foreground">
-        Sin vacunas registradas en el sistema.
-      </p>
-
-      <h2 className="mt-6 mb-3 text-lg font-bold">Próximas citas</h2>
-      {qc.isPending ? (
-        <Cargando texto="Cargando citas…" />
-      ) : qc.isError ? (
-        <ErrorCarga error={qc.error} reintentar={() => qc.refetch()} />
-      ) : proximas.length === 0 ? (
-        <p className="card-soft p-4 text-sm text-muted-foreground">No tiene citas próximas.</p>
-      ) : (
-        <ListaCitas citas={proximas} />
-      )}
-
-      <h2 className="mt-6 mb-3 text-lg font-bold">Historial de consultas</h2>
-      {qc.isPending ? null : qc.isError ? null : pasadas.length === 0 ? (
-        <p className="card-soft p-4 text-sm text-muted-foreground">
-          Todavía no hay consultas anteriores.
-        </p>
-      ) : (
-        <ListaCitas citas={pasadas} />
-      )}
-    </Layout>
-  );
-}
-
-function ListaCitas({
-  citas,
-}: {
-  citas: { id: number; fecha: string; hora: string; motivo: string | null; veterinario: string | null }[];
-}) {
-  return (
-    <ul className="space-y-3">
-      {citas.map((c) => (
-        <li key={c.id} className="card-soft p-4">
-          <p className="text-sm font-bold text-primary">
-            {formatoFecha(c.fecha)} · {c.hora}
-          </p>
-          <p className="mt-1">{c.motivo || "Sin motivo registrado"}</p>
-          <p className="mt-1 text-sm text-muted-foreground">{c.veterinario ?? "Sin veterinario"}</p>
-        </li>
-      ))}
-    </ul>
-  );
-}
+      {/* CAMBIO: ahora muestra la próxima vacuna si existe */}
+      {proximaVacuna ? (
+        <p className="card-soft p-4 text-sm">
+          <span className="font-bold">{proximaVacuna.nombre}</span> ·{" "}
