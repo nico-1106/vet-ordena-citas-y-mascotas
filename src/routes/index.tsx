@@ -122,12 +122,14 @@ function Agenda() {
                 {/* NUEVO: el menú queda fuera del Link para que al tocarlo no cambie de página */}
                 <div className="shrink-0 pr-4 lg:pr-5">
                   <EstadoCitaSelect id={c.id} estado={c.estado} />
+                  import { AsistenteIA } from "@/components/AsistenteIA";
                 </div>
               </li>
             );
           })}
         </ul>
       )}
+      <AsistenteIA />
     </Layout>
   );
 }
