@@ -257,3 +257,51 @@ export function useActualizarEstadoCita() {
     },
   });
 }
+// ---------- Tratamientos y vacunas ----------
+
+export type TratamientoDB = {
+  id: number;
+  created_at: string;
+  mascota_id: string;
+  tipo: "vacuna" | "tratamiento";
+  nombre: string;
+  fecha: string;
+  notas: string | null;
+  proxima_fecha: string | null;
+};
+
+export function useTratamientosDeMascota(mascotaId: string) {
+  return useQuery({
+    queryKey: ["tratamientos", mascotaId],
+    queryFn: async () => {
+      const { data, error } = await cliente()
+        .from("tratamientos")
+        .select("id, created_at, mascota_id, tipo, nombre, fecha, notas, proxima_fecha")
+        .eq("mascota_id", mascotaId)
+        .order("fecha", { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as TratamientoDB[];
+    },
+    retry: 1,
+  });
+}
+
+export function useCrearTratamiento() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: {
+      mascota_id: string;
+      tipo: "vacuna" | "tratamiento";
+      nombre: string;
+      fecha: string;
+      notas: string | null;
+      proxima_fecha: string | null;
+    }) => {
+      const { error } = await cliente().from("tratamientos").insert(input);
+      if (error) throw error;
+    },
+    onSettled: (_data, _error, vars) => {
+      qc.invalidateQueries({ queryKey: ["tratamientos", vars.mascota_id] });
+    },
+  });
+}
