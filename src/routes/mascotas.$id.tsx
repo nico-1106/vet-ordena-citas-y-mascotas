@@ -246,3 +246,84 @@ function Detalle() {
       {proximaVacuna ? (
         <p className="card-soft p-4 text-sm">
           <span className="font-bold">{proximaVacuna.nombre}</span> ·{" "}
+                    {formatoFecha(proximaVacuna.proxima_fecha!)}
+        </p>
+      ) : (
+        <p className="card-soft p-4 text-sm text-muted-foreground">
+          {hayVacunas
+            ? "No hay una próxima vacuna programada."
+            : "Sin vacunas registradas en el sistema."}
+        </p>
+      )}
+
+      {/* NUEVO: lista de tratamientos y vacunas */}
+      <h2 className="mt-6 mb-3 text-lg font-bold">Tratamientos y vacunas</h2>
+      {qt.isPending ? (
+        <Cargando texto="Cargando tratamientos…" />
+      ) : qt.isError ? (
+        <ErrorCarga error={qt.error} reintentar={() => qt.refetch()} />
+      ) : tratamientos.length === 0 ? (
+        <p className="card-soft p-4 text-sm text-muted-foreground">
+          Todavía no hay tratamientos ni vacunas registrados.
+        </p>
+      ) : (
+        <ul className="space-y-3">
+          {tratamientos.map((t) => (
+            <li key={t.id} className="card-soft p-4">
+              <p className="text-sm font-bold text-primary">
+                {t.tipo === "vacuna" ? "Vacuna" : "Tratamiento"} · {formatoFecha(t.fecha)}
+              </p>
+              <p className="mt-1 font-semibold">{t.nombre}</p>
+              {t.notas && <p className="mt-1 text-sm text-muted-foreground">{t.notas}</p>}
+              {t.proxima_fecha && (
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Próxima dosis: {formatoFecha(t.proxima_fecha)}
+                </p>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <h2 className="mt-6 mb-3 text-lg font-bold">Próximas citas</h2>
+      {qc.isPending ? (
+        <Cargando texto="Cargando citas…" />
+      ) : qc.isError ? (
+        <ErrorCarga error={qc.error} reintentar={() => qc.refetch()} />
+      ) : proximas.length === 0 ? (
+        <p className="card-soft p-4 text-sm text-muted-foreground">No tiene citas próximas.</p>
+      ) : (
+        <ListaCitas citas={proximas} />
+      )}
+
+      <h2 className="mt-6 mb-3 text-lg font-bold">Historial de consultas</h2>
+      {qc.isPending ? null : qc.isError ? null : pasadas.length === 0 ? (
+        <p className="card-soft p-4 text-sm text-muted-foreground">
+          Todavía no hay consultas anteriores.
+        </p>
+      ) : (
+        <ListaCitas citas={pasadas} />
+      )}
+    </Layout>
+  );
+}
+
+function ListaCitas({
+  citas,
+}: {
+  citas: { id: number; fecha: string; hora: string; motivo: string | null; veterinario: string | null }[];
+}) {
+  return (
+    <ul className="space-y-3">
+      {citas.map((c) => (
+        <li key={c.id} className="card-soft p-4">
+          <p className="text-sm font-bold text-primary">
+            {formatoFecha(c.fecha)} · {c.hora}
+          </p>
+          <p className="mt-1">{c.motivo || "Sin motivo registrado"}</p>
+          <p className="mt-1 text-sm text-muted-foreground">{c.veterinario ?? "Sin veterinario"}</p>
+        </li>
+      ))}
+    </ul>
+  );
+}
