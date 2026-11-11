@@ -305,3 +305,56 @@ export function useCrearTratamiento() {
     },
   });
 }
+// ---------- Datos para la IA (Ley 1581: sin datos de dueños) ----------
+
+export async function obtenerDatosParaIA() {
+  const db = cliente();
+
+  const { data: citas, error: errCitas } = await db
+    .from("citas")
+    .select("fecha_hora, motivo, veterinario, estado, mascotas(nombre)")
+    .order("fecha_hora", { ascending: true });
+  if (errCitas) throw errCitas;
+
+  const { data: tratamientos, error: errTrat } = await db
+    .from("tratamientos")
+    .select("tipo, nombre, fecha, proxima_fecha, mascotas(nombre)")
+    .order("fecha", { ascending: false });
+  if (errTrat) throw errTrat;
+
+  type FilaCita = {
+    fecha_hora: string;
+    motivo: string | null;
+    veterinario: string | null;
+    estado: string;
+    mascotas: { nombre: string } | null;
+  };
+  type FilaTrat = {
+    tipo: string;
+    nombre: string;
+    fecha: string;
+    proxima_fecha: string | null;
+    mascotas: { nombre: string } | null;
+  };
+
+  return {
+    citas: ((citas ?? []) as unknown as FilaCita[]).map((c) => {
+      const { fecha, hora } = partes(c.fecha_hora); // hora de Colombia
+      return {
+        mascota: c.mascotas?.nombre ?? "Desconocida",
+        fecha,
+        hora,
+        motivo: c.motivo ?? "Sin motivo",
+        veterinario: c.veterinario ?? "Sin asignar",
+        estado: c.estado,
+      };
+    }),
+    tratamientos: ((tratamientos ?? []) as unknown as FilaTrat[]).map((t) => ({
+      mascota: t.mascotas?.nombre ?? "Desconocida",
+      tipo: t.tipo,
+      nombre: t.nombre,
+      fecha: t.fecha,
+      proxima_fecha: t.proxima_fecha,
+    })),
+  };
+}
