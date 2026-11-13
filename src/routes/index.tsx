@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useState } from "react";
 import { Layout } from "@/components/Layout";
 import { IconEspecie } from "@/components/icons";
 import { hoyISO, formatoFecha } from "@/lib/store";
@@ -28,9 +29,19 @@ export const Route = createFileRoute("/")({
   component: Agenda,
 });
 
+function moverDia(iso: string, dias: number) {
+  const d = new Date(`${iso}T12:00:00`);
+  d.setDate(d.getDate() + dias);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${dd}`;
+}
+
 function Agenda() {
   const hoy = hoyISO();
-  const q = useCitasDelDia(hoy);
+  const [fecha, setFecha] = useState(hoy);
+  const q = useCitasDelDia(fecha);
   const delDia = q.data ?? [];
 
   const vets = new Set(delDia.map((c) => c.veterinario));
@@ -43,7 +54,7 @@ function Agenda() {
           <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
             Agenda del día — Clinica Veterinaria NS
           </p>
-          <h1 className="mt-1 text-2xl font-bold tracking-tight">{formatoFecha(hoy)}</h1>
+          <h1 className="mt-1 text-2xl font-bold tracking-tight">{formatoFecha(fecha)}</h1>
         </div>
         <Link
           to="/nueva-cita"
@@ -53,9 +64,43 @@ function Agenda() {
         </Link>
       </header>
 
-      <dl className="grid grid-cols-3 divide-x divide-border border-b border-border">
+      <div className="mt-4 flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          onClick={() => setFecha(moverDia(fecha, -1))}
+          className="btn-outline px-3 py-2 text-sm"
+        >
+          ← Anterior
+        </button>
+        <input
+          type="date"
+          value={fecha}
+          onChange={(e) => {
+            if (e.target.value) setFecha(e.target.value);
+          }}
+          className="rounded-md border border-border bg-background px-3 py-2 text-sm"
+        />
+        <button
+          type="button"
+          onClick={() => setFecha(moverDia(fecha, 1))}
+          className="btn-outline px-3 py-2 text-sm"
+        >
+          Siguiente →
+        </button>
+        {fecha !== hoy && (
+          <button
+            type="button"
+            onClick={() => setFecha(hoy)}
+            className="btn-primary px-3 py-2 text-sm"
+          >
+            Hoy
+          </button>
+        )}
+      </div>
+
+      <dl className="mt-4 grid grid-cols-3 divide-x divide-border border-b border-border">
         {[
-          { k: "Citas de hoy", v: q.data ? String(delDia.length) : "—" },
+          { k: fecha === hoy ? "Citas de hoy" : "Citas del día", v: q.data ? String(delDia.length) : "—" },
           { k: "Veterinarios", v: q.data ? String(vets.size) : "—" },
           { k: "Primera cita", v: proxima?.hora ?? "—" },
         ].map((s) => (
@@ -78,7 +123,7 @@ function Agenda() {
         <ErrorCarga error={q.error} reintentar={() => q.refetch()} />
       ) : delDia.length === 0 ? (
         <p className="card-soft p-6 text-center text-sm text-muted-foreground">
-          Hoy no hay citas agendadas. Toca "+ Nueva cita" para programar la primera.
+          No hay citas agendadas para este día. Toca "+ Nueva cita" para programar una.
         </p>
       ) : (
         <ul className="card-soft divide-y divide-border overflow-hidden">
