@@ -110,4 +110,28 @@ export function Layout({ children }: { children: ReactNode }) {
         </header>
 
         <main className="flex-1 px-4 pb-28 pt-5 lg:px-8 lg:pb-10">
-          <div
+                    <div className="mx-auto w-full max-w-4xl">{children}</div>
+        </main>
+      </div>
+
+      {/* Navegación inferior — celular y tablet */}
+      <nav className="fixed bottom-0 left-0 z-20 w-full border-t border-border bg-card pb-[env(safe-area-inset-bottom)] lg:hidden">
+        <ul className="grid grid-cols-3">
+          {items.map(({ to, label, Icon }) => (
+            <li key={to}>
+              <Link
+                to={to}
+                activeOptions={{ exact: to === "/" }}
+                className="flex flex-col items-center gap-1 py-2.5 text-[11px] font-semibold text-muted-foreground transition-colors"
+                activeProps={{ className: "!text-primary" }}
+              >
+                <Icon className="h-5 w-5" />
+                {label}
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </nav>
+    </div>
+  );
+}
