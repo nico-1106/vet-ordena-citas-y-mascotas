@@ -9,7 +9,7 @@ export async function consultarAsistenteIA(pregunta: string): Promise<string> {
   }
 
   // 1. Consultar la base (sin datos de dueños)
-  const datos = await obtenerDatosParaIA();
+  const datos = await obtenerDatosParaIA(pregunta, hoyISO());
 
   // 2. Armar el prompt en tres partes
   const instruccion =
