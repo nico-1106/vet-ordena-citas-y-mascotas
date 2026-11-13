@@ -307,20 +307,11 @@ export function useCrearTratamiento() {
 }
 // ---------- Datos para la IA (Ley 1581: sin datos de dueños) ----------
 
-export async function obtenerDatosParaIA() {
+// ---------- Datos para la IA: la PREGUNTA decide la consulta (RAG) ----------
+
+export async function obtenerDatosParaIA(pregunta: string, hoy: string) {
   const db = cliente();
-
-  const { data: citas, error: errCitas } = await db
-    .from("citas")
-    .select("fecha_hora, motivo, veterinario, estado, mascotas(nombre)")
-    .order("fecha_hora", { ascending: true });
-  if (errCitas) throw errCitas;
-
-  const { data: tratamientos, error: errTrat } = await db
-    .from("tratamientos")
-    .select("tipo, nombre, fecha, proxima_fecha, mascotas(nombre)")
-    .order("fecha", { ascending: false });
-  if (errTrat) throw errTrat;
+  const p = pregunta.toLowerCase();
 
   type FilaCita = {
     fecha_hora: string;
@@ -337,8 +328,11 @@ export async function obtenerDatosParaIA() {
     mascotas: { nombre: string } | null;
   };
 
-  return {
-    citas: ((citas ?? []) as unknown as FilaCita[]).map((c) => {
+  const SEL_CITAS = "fecha_hora, motivo, veterinario, estado, mascotas(nombre)";
+  const SEL_TRAT = "tipo, nombre, fecha, proxima_fecha, mascotas(nombre)";
+
+  const formatearCitas = (rows: unknown) =>
+    (rows as FilaCita[]).map((c) => {
       const { fecha, hora } = partes(c.fecha_hora); // hora de Colombia
       return {
         mascota: c.mascotas?.nombre ?? "Desconocida",
@@ -348,13 +342,65 @@ export async function obtenerDatosParaIA() {
         veterinario: c.veterinario ?? "Sin asignar",
         estado: c.estado,
       };
-    }),
-    tratamientos: ((tratamientos ?? []) as unknown as FilaTrat[]).map((t) => ({
+    });
+
+  const formatearTrat = (rows: unknown) =>
+    (rows as FilaTrat[]).map((t) => ({
       mascota: t.mascotas?.nombre ?? "Desconocida",
       tipo: t.tipo,
       nombre: t.nombre,
       fecha: t.fecha,
       proxima_fecha: t.proxima_fecha,
-    })),
-  };
+    }));
+
+  let citas: ReturnType<typeof formatearCitas> = [];
+  let tratamientos: ReturnType<typeof formatearTrat> = [];
+  let nota = "";
+
+  if (/vacuna|tratamiento|desparasit|dosis/.test(p)) {
+    // Pregunta de vacunas o tratamientos: solo los 20 más recientes
+    const { data, error } = await db
+      .from("tratamientos")
+      .select(SEL_TRAT)
+      .order("fecha", { ascending: false })
+      .limit(20);
+    if (error) throw error;
+    tratamientos = formatearTrat(data ?? []);
+    nota = "Se incluyen solo los 20 tratamientos y vacunas más recientes.";
+  } else if (/\bhoy\b|mi d[ií]a|agenda/.test(p)) {
+    // Pregunta del día: solo las citas de hoy
+    const { data, error } = await db
+      .from("citas")
+      .select(SEL_CITAS)
+      .gte("fecha_hora", aFechaHora(hoy, "00:00"))
+      .lte("fecha_hora", `${hoy}T23:59:59${OFFSET}`)
+      .order("fecha_hora");
+    if (error) throw error;
+    citas = formatearCitas(data ?? []);
+    nota = "Se incluyen solo las citas de hoy.";
+  } else if (/pendiente/.test(p)) {
+    // Pregunta de pendientes: el CÓDIGO cuenta, la IA solo explica
+    const { data, error, count } = await db
+      .from("citas")
+      .select(SEL_CITAS, { count: "exact" })
+      .eq("estado", "pendiente")
+      .order("fecha_hora")
+      .limit(20);
+    if (error) throw error;
+    citas = formatearCitas(data ?? []);
+    nota = `Total de citas pendientes en el sistema: ${count ?? 0}. Se muestran las primeras ${citas.length}.`;
+  } else {
+    // Pregunta general: solo las 10 próximas citas
+    const { data, error } = await db
+      .from("citas")
+      .select(SEL_CITAS)
+      .gte("fecha_hora", new Date().toISOString())
+      .order("fecha_hora")
+      .limit(10);
+    if (error) throw error;
+    citas = formatearCitas(data ?? []);
+    nota = "Se incluyen solo las 10 próximas citas.";
+  }
+
+  return { citas, tratamientos, nota };
 }
