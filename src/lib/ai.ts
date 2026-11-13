@@ -23,7 +23,8 @@ export async function consultarAsistenteIA(pregunta: string): Promise<string> {
     "No das diagnósticos ni consejos médicos veterinarios, ni opinas de otros temas.";
 
   const contexto =
-    `Hoy es ${hoyISO()}. Todas las horas están en hora de Colombia.\n\n` +
+    `Hoy es ${hoyISO()}. Todas las horas están en hora de Colombia.\n` +
+    `${datos.nota}\n\n` +
     `CITAS:\n${JSON.stringify(datos.citas)}\n\n` +
     `TRATAMIENTOS Y VACUNAS:\n${JSON.stringify(datos.tratamientos)}`;
 
