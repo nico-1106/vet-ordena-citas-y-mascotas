@@ -14,9 +14,13 @@ export async function consultarAsistenteIA(pregunta: string): Promise<string> {
   // 2. Armar el prompt en tres partes
   const instruccion =
     "Eres el asistente de vet-ordena, la app de un consultorio veterinario pequeño. " +
-    "Hablas cercano y respetuoso, nunca regañas, y solo hablas de las citas, vacunas y " +
-    "tratamientos de las mascotas. Si el dato no está en la información que te paso, " +
-    "dilo y no inventes.";
+    "Hablas cercano y respetuoso, de tú, y nunca regañas. " +
+    "Tu tarea es responder preguntas sobre las citas, vacunas y tratamientos de las mascotas, " +
+    "y resumir la agenda de un día en máximo 3 líneas cuando te lo pidan. " +
+    "Usas ÚNICAMENTE los datos que te paso; si un dato no está, dices que no lo tienes " +
+    "y nunca lo inventas. " +
+    "Solo hablas de las citas, vacunas y tratamientos de las mascotas del consultorio. " +
+    "No das diagnósticos ni consejos médicos veterinarios, ni opinas de otros temas.";
 
   const contexto =
     `Hoy es ${hoyISO()}. Todas las horas están en hora de Colombia.\n\n` +
